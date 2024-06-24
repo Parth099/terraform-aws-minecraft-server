@@ -1,0 +1,29 @@
+#!/bin/bash
+
+log_file="/var/log/user_data.log"
+
+# Function to write logs to the log file
+log() {
+  echo "$(date): $1" >> "$log_file"
+}
+
+log "Starting user_data script..."
+
+TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+OUTPUT=$(curl http://169.254.169.254/latest/meta-data/instance-id -H "X-aws-ec2-metadata-token: $TOKEN")
+
+log "$OUTPUT"
+
+# need to set vol-id manually below
+aws ec2 attach-volume --volume-id ${volume_id} --device /dev/xvdf --instance-id $OUTPUT --region us-east-1 || log "Error: EBS attchment"
+sudo sleep 5
+sudo mkdir /data || log "Error: mkdir data"
+sudo mount /dev/xvdf /data || log "Error: mount xvdf"
+
+sudo rpm -Uvh /data/jdk21.rpm || log "Error: java21 install failure"
+
+# NORMAL
+sudo screen -d -m /data/start.sh
+
+# MODDED 
+# sudo screen -d -m /data/mod-server/run.sh
